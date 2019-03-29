@@ -98,6 +98,7 @@ class HomeScreen(Screen):
 			self.IsCtrl = False
 		elif(self.left_key=="shift" or self.left_key=="rshift"):
 			self.IsShift = False
+			self.SelectionCenter = "nothing"
 
 	def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
 		key_no, self.pressed_key = keycode
@@ -106,6 +107,8 @@ class HomeScreen(Screen):
 			self.IsCtrl = True
 		elif(self.pressed_key=="shift" or self.pressed_key=="rshift"):
 			self.IsShift = True
+			if(self.SelectionCenter=="nothing"):
+				self.SelectionCenter = self.PointLast
 		elif(self.pressed_key=="backspace"):
 			try:
 				fold = NowFolders[NowFolder][:-(1+NowFolders[NowFolder][:-1][::-1].index("/"))]
@@ -135,46 +138,14 @@ class HomeScreen(Screen):
 				else:
 					NewPoint = self.FolderItems - 1
 			if not (NewPoint == -1):
-				self.ClickedOn(self.FolderContains[NewPoint]["path"],NewPoint,self.FolderContains[NewPoint]["type"])
-				# self,filepath,x_code,filetype="Folder",_="_"
-			# if not self.IsShift:
-			# 	if(self.pressed_key=="right"):
-			# 		if(self.PointLast < (self.FolderItems-1)):
-			# 			self.PointLast += 1
-			# 	elif(self.pressed_key=="left"):
-			# 		if(self.PointLast > 0):
-			# 			self.PointLast -= 1
-			# 	elif(self.pressed_key=="up"):
-			# 		if(self.PointLast > (self.RowItems - 1)):
-			# 			self.PointLast -= self.RowItems
-			# 	elif(self.pressed_key=="down"):
-			# 		if(self.PointLast < (self.FolderItems - self.RowItems)):
-			# 			self.PointLast += self.RowItems
-			# 	self.PointOn = [0 for i in range(self.FolderItems)]
-			# 	self.PointOn[self.PointLast] = 1
-			# if self.IsShift:
-			# 	if(self.pressed_key=="right"):
-			# 		if(self.PointLast < (self.FolderItems-1)):
-			# 			self.PointLast += 1
-			# 			self.PointOn[self.PointLast] = 1
-			# 	elif(self.pressed_key=="left"):
-			# 		if(self.PointLast > 0):
-			# 			self.PointLast -= 1
-			# 			self.PointOn[self.PointLast] = 1
-			# 	elif(self.pressed_key=="up"):
-			# 		for i in range(max(0,self.PointLast-self.RowItems),self.PointLast):
-			# 			self.PointOn[i] = 1
-			# 		if(self.PointLast > (self.RowItems - 1)):
-			# 			self.PointLast -= self.RowItems
-			# 	elif(self.pressed_key=="down"):
-			# 		for i in range(self.PointLast,min(self.FolderItems,self.PointLast+self.RowItems+1)):
-			# 			self.PointOn[i] = 1
-			# 		if(self.PointLast < (self.FolderItems - self.RowItems)):
-			# 			self.PointLast += self.RowItems
-			# self.HighButton()
+				self.ClickedOn(self.FolderContains[NewPoint]["path"],NewPoint,self.FolderContains[NewPoint]["type"],False)
 		elif(self.pressed_key=="enter" or self.pressed_key=="numpadenter"):
+			print("entered enter")
+			print(self.LastClickOn)
 			if not(self.LastClickOn=="nothing"):
+				print(self.LastClickType)
 				if(self.LastClickType=="Folder"):
+					print("will call ChangeFolder")
 					self.ChangeFolder(self.LastClickOn,True)
 				elif self.LastClickType in Info["Exts"]:
 					Info["Rec"]["Folders"].append(self.LastClickOn[:-len(self.LastClickOn.split("/")[-1])])
@@ -194,10 +165,6 @@ class HomeScreen(Screen):
 		return
 		if(-1 < self.PointOn < len(self.FolderContains)):
 			self.FolderContains[self.PointOn]["btn"].background_color = (0.5,0.5,0.5,0.5)
-		# self.PointOn = NewPoint
-		# self.LastClickOn = self.FolderContains[self.PointOn]["path"]
-		# self.LastClickType = self.FolderContains[self.PointOn]["type"]
-		# self.ShowInfo(self.LastClickOn,self.FolderContains[self.PointOn]["type"])
 
 	def DefineSpecials(self):
 		self.RowItems = 6
@@ -237,6 +204,7 @@ class HomeScreen(Screen):
 		self.clear_widgets()
 		self.LastClickOn = "nothing"
 		self.LastClickType = "nothing"
+		self.SelectionCenter = "nothing"
 		self.PointOn = []
 		self.PointLast = -1
 		self.ShowHomeIcon()
@@ -286,6 +254,8 @@ class HomeScreen(Screen):
 			folderpath = NowFolders[foldernum]
 			fold = folderpath[1:-1].replace("//","/").split("/")[-1]
 			pathbtn = Button(text="  "+fold+"  ",size_hint_x=0.8,background_color=(0.5,0.5,0.5,0.5),halign='center',font_size=25,font_name=Info["Font"]["LobsterTwo-BoldItalic"],on_press=partial(self.ChangeTab,foldernum))
+			if(foldernum==NowFolder):
+				pathbtn.background_color=(0.6,0.6,0.6,0.75)
 			pathbtn.bind(width=lambda s,w: s.setter("text_size")(s,(w,None)))
 			pathbtn.bind(texture_size=pathbtn.setter("size"))
 			MiniTab.add_widget(pathbtn)
@@ -323,7 +293,7 @@ class HomeScreen(Screen):
 		self.Folders = get_folders(NowFolders[NowFolder])
 		for folder in self.Folders:
 			x_code = len(self.FolderContains)
-			fun = partial(self.ClickedOn,NowFolders[NowFolder]+folder+"/",x_code,"Folder")
+			fun = partial(self.ClickedOn,NowFolders[NowFolder]+folder+"/",x_code,"Folder",True)
 			self.FolderContains[x_code] = {"path":NowFolders[NowFolder]+folder+"/","type":"Folder"}
 			self.FolderContains[x_code]["image"] = ImageButton(source=Info["RootIcon"]["folder"],size_hint_y=None,height=70,on_press=fun)
 			self.FolderContains[x_code]["btn"] = Button(text=folder[:20],halign="center",valign="center",size_hint_y=None,height=50,background_color=(0.5,0.5,0.5,0.5),font_size=18,font_name=Info["Font"]["LobsterTwo-BoldItalic"],on_press=fun)
@@ -347,7 +317,7 @@ class HomeScreen(Screen):
 				else:
 					source = Info["RootIcon"][Info["Exts"][ext.lower()]]
 			x_code = len(self.FolderContains)
-			fun = partial(self.ClickedOn,NowFolders[NowFolder]+file,x_code,ext)
+			fun = partial(self.ClickedOn,NowFolders[NowFolder]+file,x_code,ext,True)
 			self.FolderContains[x_code] = {"path":NowFolders[NowFolder] + file,"type":ext}
 			self.FolderContains[x_code]["image"] = ObjectProperty(None)
 			self.FolderContains[x_code]["image"] = ImageButton(source=source,size_hint_y=None,height=70,on_press=fun)
@@ -389,7 +359,7 @@ class HomeScreen(Screen):
 		self.FavRoll.add_widget(this)
 		for Folder in Info["Favs"]["Folders"]:
 			MiniFold = GridLayout(cols=1,size_hint_y=None,height=40,spacing=1,padding=2)
-			fun = partial(self.ClickedOn,Info["Favs"]["Folders"][Folder],-1,"Folder")
+			fun = partial(self.ClickedOn,Info["Favs"]["Folders"][Folder],-1,"Folder",True)
 			this = Button(text=Folder,halign="center",valign="center",size_hint_y=None,height=40,background_color=(0.5,0.5,0.5,0.5),font_size=25,font_name=Info["Font"]["LobsterTwo-BoldItalic"],on_press=fun)
 			this.bind(width=lambda s,w: s.setter("text_size")(s,(w,None)))
 			MiniFold.add_widget(this)
@@ -415,7 +385,7 @@ class HomeScreen(Screen):
 			show = min(4,len(ShowFold))
 			for i in range(show):
 				folder = ShowFold[i][1:-1].split("/")[-1]
-				fun = partial(self.ClickedOn,ShowFold[i],-1,"Folder")
+				fun = partial(self.ClickedOn,ShowFold[i],-1,"Folder",True)
 				# fun = partial(self.ClickedOn,ShowFiles[i],ShowFiles[i].split(".")[-1])
 				this = Button(text=folder,halign="center",valign="center",size_hint_y=None,background_color=(0.5,0.5,0.5,0.5),font_size=25,font_name=Info["Font"]["LobsterTwo-BoldItalic"],on_press=fun)
 				this.bind(width=lambda s,w: s.setter("text_size")(s,(w,None)))
@@ -442,7 +412,7 @@ class HomeScreen(Screen):
 			show = min(4,len(ShowFiles))
 			for i in range(show):
 				folder = ShowFiles[i].split("/")[-1]
-				fun = partial(self.ClickedOn,ShowFiles[i],-1,ShowFiles[i].split(".")[-1])
+				fun = partial(self.ClickedOn,ShowFiles[i],-1,ShowFiles[i].split(".")[-1],True)
 				this = Button(text=folder,halign="center",valign="center",size_hint_y=None,background_color=(0.5,0.5,0.5,0.5),font_size=25,font_name=Info["Font"]["LobsterTwo-BoldItalic"],on_press=fun)
 				this.bind(width=lambda s,w: s.setter("text_size")(s,(w,None)))
 				this.bind(texture_size=this.setter("size"))
@@ -544,17 +514,36 @@ class HomeScreen(Screen):
 			this.bind(texture_size=this.setter("size"))
 			self.InfoRoll.add_widget(this)
 
-	def ClickedOn(self,filepath,x_code,filetype="Folder",_="_"):
+	def ClickedOn(self,filepath,x_code,filetype="Folder",Opencmd=True,_="_"):
 		NowTime = time.time()
 		print(self.PointLast,x_code,self.IsShift,self.IsCtrl)
 		if not(x_code==-1):
 			if self.IsShift:
 				if(x_code>self.PointLast):
-					for i in range(self.PointLast+1,x_code+1):
-						self.PointOn[i] = 1 - self.PointOn[i]
+					if(self.PointLast>=self.SelectionCenter):
+						for i in range(self.PointLast+1,x_code+1):
+							self.PointOn[i] = 1 - self.PointOn[i]
+					elif(x_code>=self.SelectionCenter):
+						for i in range(self.PointLast,self.SelectionCenter):
+							self.PointOn[i] = 1 - self.PointOn[i]
+						for i in range(self.SelectionCenter+1,x_code+1):
+							self.PointOn[i] = 1 - self.PointOn[i]
+					else:
+						for i in range(self.PointLast,x_code):
+							self.PointOn[i] = 1 - self.PointOn[i]
 				elif(x_code<self.PointLast):
-					for i in range(self.PointLast-1,x_code-1,-1):
-						self.PointOn[i] = 1 - self.PointOn[i]
+					if(self.PointLast<=self.SelectionCenter):
+						for i in range(x_code,self.PointLast):
+							self.PointOn[i] = 1 - self.PointOn[i]
+					elif(x_code<=self.SelectionCenter):
+						for i in range(self.SelectionCenter+1,self.PointLast+1):
+							self.PointOn[i] = 1 - self.PointOn[i]
+						for i in range(x_code,self.SelectionCenter):
+							self.PointOn[i] = 1 - self.PointOn[i]
+					else:
+						for i in range(x_code+1,self.PointLast+1):
+							self.PointOn[i] = 1 - self.PointOn[i]
+
 			elif(not self.IsCtrl):
 				for i in range(self.FolderItems):
 					self.PointOn[i] = 0
@@ -564,7 +553,8 @@ class HomeScreen(Screen):
 		if((NowTime-self.LastClickTime)<self.TimeAllow):
 			if(filepath==self.LastClickOn):
 				if filetype=="Folder":
-					self.ChangeFolder(filepath,True)
+					if Opencmd:
+						self.ChangeFolder(filepath,True)
 					if not(self.IsCtrl + self.IsShift):
 						return
 				if filetype in Info["Exts"]:
@@ -573,7 +563,8 @@ class HomeScreen(Screen):
 					Info["Rec"]["Files"].append(filepath)
 					Info["Rec"]["Files"] = Info["Rec"]["Files"][-100:]
 					PostProcessing()
-					webbrowser.open(filepath)
+					if Opencmd:
+						webbrowser.open(filepath)
 					if not(self.IsCtrl + self.IsShift):
 						return
 		self.LastClickTime = NowTime
@@ -586,10 +577,17 @@ class HomeScreen(Screen):
 
 	def ChangeFolder(self,folder,addRec=True,_="_"):
 		global NowFolders, NowFolder, RecFolders
-		if not(self.IsCtrl + self.IsShift):
+		print(folder)
+		if not self.IsShift:
 			if addRec:
 				RecFolders[NowFolder].append(NowFolders[NowFolder])
 			NowFolders[NowFolder] = folder
+			self.on_pre_enter()
+		else:
+			NowFolders = NowFolders[:NowFolder+1] + [folder] + NowFolders[1+NowFolder:]
+			RecFolders = RecFolders[:NowFolder+1] + [[]] + RecFolders[1+NowFolder:]
+			NowFolder += 1
+			print(NowFolders,RecFolders,NowFolder)
 			self.on_pre_enter()
 
 	def GoBack(self,folder,addRec=False,_="_"):
